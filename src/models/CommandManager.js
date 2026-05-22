@@ -37,6 +37,21 @@ export class MovePolygonCommand {
   redo() { this.scene.movePolygon(this.polygonId, this.newPos); }
 }
 
+export class ClearAllCommand {
+  constructor(scene) {
+    this.scene = scene;
+    this.saved = scene.getAll().map(p => p.clone());
+    this.wasSelected = scene.getSelectedId();
+  }
+
+  execute() { this.scene.clear(); }
+  undo() {
+    this.saved.forEach(p => this.scene.add(p));
+    if (this.wasSelected) this.scene.select(this.wasSelected);
+  }
+  redo() { this.scene.clear(); }
+}
+
 export class CommandManager {
   constructor() {
     this._undoStack = [];
