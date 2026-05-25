@@ -112,8 +112,14 @@ export class ToolBar extends HTMLElement {
           position: p.position,
           color: p.color,
         }));
-        this._commands.execute(new ImportCommand(this._scene, polygons));
-        showToast(`Импортировано полигонов: ${polygons.length}`);
+        const cmd = new ImportCommand(this._scene, polygons);
+        this._commands.execute(cmd);
+        const skipped = polygons.length - cmd._importedCount;
+        if (skipped > 0) {
+          showToast(`Импортировано полигонов: ${cmd._importedCount}, пропущено (перекрытие): ${skipped}`);
+        } else {
+          showToast(`Импортировано полигонов: ${cmd._importedCount}`);
+        }
       } catch (err) {
         showToast('Ошибка импорта');
       }

@@ -6,7 +6,11 @@ export class AddPolygonCommand {
 
   execute() { this.scene.add(this.polygon); }
   undo() { this.scene.remove(this.polygon.id); }
-  redo() { this.scene.add(this.polygon); }
+  redo() {
+    if (!this.scene.wouldOverlap(this.polygon, this.polygon.position)) {
+      this.scene.add(this.polygon);
+    }
+  }
 }
 
 export class RemovePolygonCommand {
@@ -18,8 +22,10 @@ export class RemovePolygonCommand {
 
   execute() { this.scene.remove(this.polygon.id); }
   undo() {
-    this.scene.add(this.polygon);
-    if (this.wasSelected) this.scene.select(this.polygon.id);
+    if (!this.scene.wouldOverlap(this.polygon, this.polygon.position)) {
+      this.scene.add(this.polygon);
+      if (this.wasSelected) this.scene.select(this.polygon.id);
+    }
   }
   redo() { this.scene.remove(this.polygon.id); }
 }
@@ -33,8 +39,18 @@ export class MovePolygonCommand {
   }
 
   execute() { this.scene.movePolygon(this.polygonId, this.newPos); }
-  undo() { this.scene.movePolygon(this.polygonId, this.oldPos); }
-  redo() { this.scene.movePolygon(this.polygonId, this.newPos); }
+  undo() {
+    const poly = this.scene.get(this.polygonId);
+    if (poly && !this.scene.wouldOverlap(poly, this.oldPos)) {
+      this.scene.movePolygon(this.polygonId, this.oldPos);
+    }
+  }
+  redo() {
+    const poly = this.scene.get(this.polygonId);
+    if (poly && !this.scene.wouldOverlap(poly, this.newPos)) {
+      this.scene.movePolygon(this.polygonId, this.newPos);
+    }
+  }
 }
 
 export class ChangeColorCommand {
@@ -56,9 +72,24 @@ export class ImportCommand {
     this.polygons = polygons;
   }
 
-  execute() { this.polygons.forEach(p => this.scene.add(p)); }
+  execute() {
+    let added = 0;
+    this.polygons.forEach(p => {
+      if (!this.scene.wouldOverlap(p, p.position)) {
+        this.scene.add(p);
+        added++;
+      }
+    });
+    this._importedCount = added;
+  }
   undo() { this.polygons.forEach(p => this.scene.remove(p.id)); }
-  redo() { this.polygons.forEach(p => this.scene.add(p)); }
+  redo() {
+    this.polygons.forEach(p => {
+      if (!this.scene.wouldOverlap(p, p.position)) {
+        this.scene.add(p);
+      }
+    });
+  }
 }
 
 export class ClearAllCommand {
@@ -70,7 +101,11 @@ export class ClearAllCommand {
 
   execute() { this.scene.clear(); }
   undo() {
-    this.saved.forEach(p => this.scene.add(p));
+    this.saved.forEach(p => {
+      if (!this.scene.wouldOverlap(p, p.position)) {
+        this.scene.add(p);
+      }
+    });
     if (this.wasSelected) this.scene.select(this.wasSelected);
   }
   redo() { this.scene.clear(); }

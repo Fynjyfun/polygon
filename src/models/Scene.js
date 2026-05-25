@@ -1,4 +1,4 @@
-import { pointInPolygon } from '../utils/geometry';
+import { pointInPolygon, polygonsOverlap } from '../utils/geometry';
 
 export class Scene {
   constructor() {
@@ -93,6 +93,15 @@ export class Scene {
       if (pointInPolygon(x, y, verts)) return poly;
     }
     return null;
+  }
+
+  wouldOverlap(polygon, position) {
+    const verts = polygon.vertices.map(v => ({ x: v.x + position.x, y: v.y + position.y }));
+    for (const other of this._polygons) {
+      if (other.id === polygon.id) continue;
+      if (polygonsOverlap(verts, other.getTransformedVertices())) return true;
+    }
+    return false;
   }
 
   get count() {
