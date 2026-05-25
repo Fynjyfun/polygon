@@ -10,7 +10,9 @@ export class AppCanvas extends HTMLElement {
     this._ctx = this._canvas.getContext('2d');
     this._scene = null;
     this._commands = null;
-    this._animPolys = new Map();
+    this._appearPolys = new Map();
+    this._disappearPolys = new Map();
+    this._prevPolygons = [];
     this._unsubs = [];
 
     this._isDragging = false;
@@ -50,18 +52,49 @@ export class AppCanvas extends HTMLElement {
 
   setCommandManager(cmds) { this._commands = cmds; }
 
-  triggerRandomPolygon(polygon) {
-    this._animPolys.set(polygon.id, performance.now());
+  animatePolygonIn(id) {
+    this._appearPolys.set(id, performance.now());
     this._render();
   }
 
   _subscribeScene() {
     if (!this._scene) return;
+    this._prevPolygons = this._scene.getAll().map(p => p.clone());
     this._unsubs.push(
-      this._scene.on('scene-change', () => this._render()),
+      this._scene.on('scene-change', () => {
+        this._detectChanges();
+        this._render();
+      }),
       this._scene.on('selection-change', () => this._render()),
       this._scene.on('polygon-moved', () => this._render()),
     );
+  }
+
+  _detectChanges() {
+    const current = this._scene.getAll();
+    const currentIds = new Set(current.map(p => p.id));
+    const prevIds = new Set(this._prevPolygons.map(p => p.id));
+
+    for (const p of current) {
+      const id = p.id;
+      if (!prevIds.has(id)) {
+        this._appearPolys.set(id, performance.now());
+      }
+      if (this._disappearPolys.has(id)) {
+        this._disappearPolys.delete(id);
+      }
+    }
+
+    for (const p of this._prevPolygons) {
+      if (!currentIds.has(p.id)) {
+        this._disappearPolys.set(p.id, {
+          polygon: p,
+          startTime: performance.now(),
+        });
+      }
+    }
+
+    this._prevPolygons = current.map(p => p.clone());
   }
 
   _resize() {
@@ -157,17 +190,18 @@ export class AppCanvas extends HTMLElement {
     if (!this._scene) return;
 
     const selected = this._scene.getSelected();
+    let needsFrame = false;
 
     for (const poly of this._scene.getAll()) {
       const raw = poly.getTransformedVertices();
       let verts = raw;
 
-      const animStart = this._animPolys.get(poly.id);
+      const animStart = this._appearPolys.get(poly.id);
       if (animStart !== undefined) {
         const t = Math.min((performance.now() - animStart) / ANIM_DURATION, 1);
         const scale = easeOutBack(t);
         if (t >= 1) {
-          this._animPolys.delete(poly.id);
+          this._appearPolys.delete(poly.id);
         } else {
           const cx = raw.reduce((s, v) => s + v.x, 0) / raw.length;
           const cy = raw.reduce((s, v) => s + v.y, 0) / raw.length;
@@ -175,7 +209,7 @@ export class AppCanvas extends HTMLElement {
             x: cx + (v.x - cx) * scale,
             y: cy + (v.y - cy) * scale,
           }));
-          requestAnimationFrame(() => this._render());
+          needsFrame = true;
         }
       }
 
@@ -194,6 +228,45 @@ export class AppCanvas extends HTMLElement {
       ctx.lineWidth = isSelected ? 3 : 1.5;
       ctx.stroke();
     }
+
+    for (const [id, data] of this._disappearPolys) {
+      const t = Math.min((performance.now() - data.startTime) / ANIM_DURATION, 1);
+      const scale = 1 - easeInQuad(t);
+      const alpha = 1 - t;
+
+      if (t >= 1) {
+        this._disappearPolys.delete(id);
+        continue;
+      }
+
+      const raw = data.polygon.getTransformedVertices();
+      const cx = raw.reduce((s, v) => s + v.x, 0) / raw.length;
+      const cy = raw.reduce((s, v) => s + v.y, 0) / raw.length;
+      const verts = raw.map(v => ({
+        x: cx + (v.x - cx) * scale,
+        y: cy + (v.y - cy) * scale,
+      }));
+
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.moveTo(verts[0].x, verts[0].y);
+      for (let i = 1; i < verts.length; i++) {
+        ctx.lineTo(verts[i].x, verts[i].y);
+      }
+      ctx.closePath();
+      ctx.fillStyle = data.polygon.color;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      needsFrame = true;
+    }
+
+    if (needsFrame) {
+      requestAnimationFrame(() => this._render());
+    }
   }
 }
 
@@ -201,6 +274,10 @@ function easeOutBack(t) {
   const c1 = 1.70158;
   const c3 = c1 + 1;
   return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+}
+
+function easeInQuad(t) {
+  return t * t;
 }
 
 customElements.define('app-canvas', AppCanvas);

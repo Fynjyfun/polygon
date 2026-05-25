@@ -51,7 +51,6 @@ export class ToolBar extends HTMLElement {
     if (!data) { showToast('Нет места для нового полигона'); return; }
     const polygon = new Polygon(data);
     this._commands.execute(new AddPolygonCommand(this._scene, polygon));
-    this._canvas.triggerRandomPolygon(polygon.id);
   }
 
   delete() {
