@@ -1,4 +1,4 @@
-import { cssColorToHex } from '../utils/color';
+import './ColorPicker';
 import { ChangeColorCommand } from '../models/CommandManager';
 
 export class InfoPanel extends HTMLElement {
@@ -17,15 +17,25 @@ export class InfoPanel extends HTMLElement {
     this._colorBtn.className = 'color-indicator';
     this._colorBtn.type = 'button';
 
-    this._popup = document.createElement('div');
-    this._popup.className = 'color-popup hidden';
-    this._colorInput = document.createElement('input');
-    this._colorInput.type = 'color';
+    this._picker = document.createElement('color-picker');
+
+    this._previewEl = document.createElement('span');
+    this._previewEl.className = 'cp-preview';
+
     this._okBtn = document.createElement('button');
     this._okBtn.className = 'color-ok-btn';
     this._okBtn.textContent = 'OK';
-    this._popup.appendChild(this._colorInput);
-    this._popup.appendChild(this._okBtn);
+
+    this._popup = document.createElement('div');
+    this._popup.className = 'color-popup hidden';
+
+    const bottomRow = document.createElement('div');
+    bottomRow.className = 'cp-bottom';
+    bottomRow.appendChild(this._previewEl);
+    bottomRow.appendChild(this._okBtn);
+
+    this._popup.appendChild(this._picker);
+    this._popup.appendChild(bottomRow);
 
     this._rightEl.appendChild(this._selectEl);
     this._rightEl.appendChild(this._colorBtn);
@@ -35,6 +45,7 @@ export class InfoPanel extends HTMLElement {
 
     this._onColorBtnClick = this._onColorBtnClick.bind(this);
     this._onOkClick = this._onOkClick.bind(this);
+    this._onPickerChange = this._onPickerChange.bind(this);
     this._onDocumentClick = this._onDocumentClick.bind(this);
     this._onKeyDown = this._onKeyDown.bind(this);
   }
@@ -44,6 +55,7 @@ export class InfoPanel extends HTMLElement {
     this.appendChild(this._rightEl);
     this._colorBtn.addEventListener('click', this._onColorBtnClick);
     this._okBtn.addEventListener('click', this._onOkClick);
+    this._picker.addEventListener('change', this._onPickerChange);
     document.addEventListener('click', this._onDocumentClick);
     document.addEventListener('keydown', this._onKeyDown);
     if (this._scene) this._subscribe();
@@ -54,6 +66,7 @@ export class InfoPanel extends HTMLElement {
     this._unsubs.forEach(fn => fn());
     this._colorBtn.removeEventListener('click', this._onColorBtnClick);
     this._okBtn.removeEventListener('click', this._onOkClick);
+    this._picker.removeEventListener('change', this._onPickerChange);
     document.removeEventListener('click', this._onDocumentClick);
     document.removeEventListener('keydown', this._onKeyDown);
   }
@@ -101,8 +114,13 @@ export class InfoPanel extends HTMLElement {
     }
     const selected = this._scene.getSelected();
     if (!selected) return;
-    this._colorInput.value = cssColorToHex(selected.color);
+    this._picker.value = selected.color;
+    this._previewEl.style.backgroundColor = selected.color;
     this._popup.classList.remove('hidden');
+  }
+
+  _onPickerChange() {
+    this._previewEl.style.backgroundColor = this._picker.value;
   }
 
   _onOkClick(e) {
@@ -112,8 +130,8 @@ export class InfoPanel extends HTMLElement {
       this._closePopup();
       return;
     }
-    const newColor = this._colorInput.value;
     const oldColor = selected.color;
+    const newColor = this._picker.value;
     if (oldColor !== newColor) {
       this._commands.execute(new ChangeColorCommand(this._scene, selected.id, oldColor, newColor));
     }
