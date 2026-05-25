@@ -50,6 +50,17 @@ export class ChangeColorCommand {
   redo() { this.scene.changeColor(this.polygonId, this.newColor); }
 }
 
+export class ImportCommand {
+  constructor(scene, polygons) {
+    this.scene = scene;
+    this.polygons = polygons;
+  }
+
+  execute() { this.polygons.forEach(p => this.scene.add(p)); }
+  undo() { this.polygons.forEach(p => this.scene.remove(p.id)); }
+  redo() { this.polygons.forEach(p => this.scene.add(p)); }
+}
+
 export class ClearAllCommand {
   constructor(scene) {
     this.scene = scene;

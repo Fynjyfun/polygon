@@ -98,4 +98,15 @@ export class Scene {
   get count() {
     return this._polygons.length;
   }
+
+  toJSON() {
+    return {
+      version: 1,
+      polygons: this._polygons.map(p => ({
+        vertices: p.vertices.map(v => ({ x: v.x, y: v.y })),
+        position: { x: p.position.x, y: p.position.y },
+        color: p.color,
+      })),
+    };
+  }
 }

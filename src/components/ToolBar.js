@@ -1,5 +1,5 @@
 import { Polygon } from '../models/Polygon';
-import { AddPolygonCommand, RemovePolygonCommand, ClearAllCommand } from '../models/CommandManager';
+import { AddPolygonCommand, RemovePolygonCommand, ClearAllCommand, ImportCommand } from '../models/CommandManager';
 import { generateRandomPolygon } from '../utils/random';
 import { showToast } from './Toast';
 
@@ -11,6 +11,13 @@ export class ToolBar extends HTMLElement {
     this._canvas = null;
     this._bns = {};
     this._onKeyDown = this._onKeyDown.bind(this);
+    this._onImportFile = this._onImportFile.bind(this);
+
+    this._fileInput = document.createElement('input');
+    this._fileInput.type = 'file';
+    this._fileInput.accept = '.json,application/json';
+    this._fileInput.style.display = 'none';
+    this._fileInput.addEventListener('change', this._onImportFile);
   }
 
   connectedCallback() {
@@ -19,9 +26,14 @@ export class ToolBar extends HTMLElement {
       <button data-action="delete">🗑️ Удалить</button>
       <button data-action="clear">❌ Удалить все</button>
       <span class="separator"></span>
+      <button data-action="export">💾 Экспорт</button>
+      <button data-action="import">📂 Импорт</button>
+      <span class="separator"></span>
       <button data-action="undo" disabled>↩️ Отменить</button>
       <button data-action="redo" disabled>↪️ Повторить</button>
     `;
+
+    this.appendChild(this._fileInput);
 
     this.querySelectorAll('button').forEach(btn => {
       const action = btn.dataset.action;
@@ -62,6 +74,51 @@ export class ToolBar extends HTMLElement {
   clear() {
     if (!this._scene || this._scene.count === 0) return;
     this._commands.execute(new ClearAllCommand(this._scene));
+  }
+
+  export() {
+    if (!this._scene || this._scene.count === 0) { showToast('Нечего экспортировать'); return; }
+    const json = JSON.stringify(this._scene.toJSON(), null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'scene.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Сцена экспортирована');
+  }
+
+  import() {
+    this._fileInput.value = '';
+    this._fileInput.click();
+  }
+
+  _onImportFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (!data.polygons || !Array.isArray(data.polygons)) {
+          showToast('Неверный формат файла');
+          return;
+        }
+        const polygons = data.polygons.map(p => new Polygon({
+          vertices: p.vertices,
+          position: p.position,
+          color: p.color,
+        }));
+        this._commands.execute(new ImportCommand(this._scene, polygons));
+        showToast(`Импортировано полигонов: ${polygons.length}`);
+      } catch (err) {
+        showToast('Ошибка импорта');
+      }
+    };
+    reader.readAsText(file);
   }
 
   undo() { this._commands?.undo(); }
