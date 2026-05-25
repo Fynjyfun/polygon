@@ -125,11 +125,11 @@ export class ToolBar extends HTMLElement {
   redo() { this._commands?.redo(); }
 
   _onKeyDown(e) {
-    if (e.ctrlKey && e.key === 'z' && !e.shiftKey) { e.preventDefault(); this.undo(); }
-    if ((e.ctrlKey && e.key === 'y') || (e.ctrlKey && e.shiftKey && e.key === 'z')) {
+    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ' && !e.shiftKey) { e.preventDefault(); this.undo(); }
+    if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyY' || (e.shiftKey && e.code === 'KeyZ'))) {
       e.preventDefault(); this.redo();
     }
-    if (e.key === 'Delete') { this.delete(); }
+    if (e.code === 'Delete') { this.delete(); }
   }
 
   _syncButtons() {
