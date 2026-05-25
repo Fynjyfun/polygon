@@ -16,3 +16,4 @@ canvas.setScene(scene);
 canvas.setCommandManager(commands);
 toolbar.init(scene, commands, canvas);
 info.setScene(scene);
+info.setCommands(commands);

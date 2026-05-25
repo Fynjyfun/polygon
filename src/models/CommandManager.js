@@ -37,6 +37,19 @@ export class MovePolygonCommand {
   redo() { this.scene.movePolygon(this.polygonId, this.newPos); }
 }
 
+export class ChangeColorCommand {
+  constructor(scene, polygonId, oldColor, newColor) {
+    this.scene = scene;
+    this.polygonId = polygonId;
+    this.oldColor = oldColor;
+    this.newColor = newColor;
+  }
+
+  execute() { this.scene.changeColor(this.polygonId, this.newColor); }
+  undo() { this.scene.changeColor(this.polygonId, this.oldColor); }
+  redo() { this.scene.changeColor(this.polygonId, this.newColor); }
+}
+
 export class ClearAllCommand {
   constructor(scene) {
     this.scene = scene;

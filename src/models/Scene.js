@@ -72,6 +72,13 @@ export class Scene {
     return this._selectedId;
   }
 
+  changeColor(id, newColor) {
+    const poly = this.get(id);
+    if (!poly) return;
+    poly.color = newColor;
+    this._emit('scene-change', this._polygons);
+  }
+
   movePolygon(id, newPosition) {
     const poly = this.get(id);
     if (!poly) return;

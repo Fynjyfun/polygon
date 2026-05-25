@@ -97,6 +97,73 @@ info-panel {
   font-size: 14px;
 }
 
+.info-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.color-indicator {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: border-color 0.2s;
+}
+
+.color-indicator:hover {
+  border-color: #fff;
+}
+
+.color-popup {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 8px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: #1a1a2e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 10px 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  z-index: 200;
+}
+
+.color-popup.hidden {
+  display: none;
+}
+
+.color-popup input[type="color"] {
+  width: 40px;
+  height: 32px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 2px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.color-ok-btn {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 6px;
+  background: #0f3460;
+  color: #e0e0e0;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.color-ok-btn:hover {
+  background: #1a4a8a;
+}
+
 .toast {
   position: fixed;
   bottom: 24px;

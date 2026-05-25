@@ -1,21 +1,61 @@
+import { cssColorToHex } from '../utils/color';
+import { ChangeColorCommand } from '../models/CommandManager';
+
 export class InfoPanel extends HTMLElement {
   constructor() {
     super();
     this._scene = null;
+    this._commands = null;
     this._countEl = document.createElement('span');
+
+    this._rightEl = document.createElement('span');
+    this._rightEl.className = 'info-right';
+
     this._selectEl = document.createElement('span');
+
+    this._colorBtn = document.createElement('button');
+    this._colorBtn.className = 'color-indicator';
+    this._colorBtn.type = 'button';
+
+    this._popup = document.createElement('div');
+    this._popup.className = 'color-popup hidden';
+    this._colorInput = document.createElement('input');
+    this._colorInput.type = 'color';
+    this._okBtn = document.createElement('button');
+    this._okBtn.className = 'color-ok-btn';
+    this._okBtn.textContent = 'OK';
+    this._popup.appendChild(this._colorInput);
+    this._popup.appendChild(this._okBtn);
+
+    this._rightEl.appendChild(this._selectEl);
+    this._rightEl.appendChild(this._colorBtn);
+    this._rightEl.appendChild(this._popup);
+
     this._unsubs = [];
+
+    this._onColorBtnClick = this._onColorBtnClick.bind(this);
+    this._onOkClick = this._onOkClick.bind(this);
+    this._onDocumentClick = this._onDocumentClick.bind(this);
+    this._onKeyDown = this._onKeyDown.bind(this);
   }
 
   connectedCallback() {
     this.appendChild(this._countEl);
-    this.appendChild(this._selectEl);
+    this.appendChild(this._rightEl);
+    this._colorBtn.addEventListener('click', this._onColorBtnClick);
+    this._okBtn.addEventListener('click', this._onOkClick);
+    document.addEventListener('click', this._onDocumentClick);
+    document.addEventListener('keydown', this._onKeyDown);
     if (this._scene) this._subscribe();
     this._update();
   }
 
   disconnectedCallback() {
     this._unsubs.forEach(fn => fn());
+    this._colorBtn.removeEventListener('click', this._onColorBtnClick);
+    this._okBtn.removeEventListener('click', this._onOkClick);
+    document.removeEventListener('click', this._onDocumentClick);
+    document.removeEventListener('keydown', this._onKeyDown);
   }
 
   setScene(scene) {
@@ -24,6 +64,10 @@ export class InfoPanel extends HTMLElement {
     this._scene = scene;
     if (this.isConnected) this._subscribe();
     this._update();
+  }
+
+  setCommands(commands) {
+    this._commands = commands;
   }
 
   _subscribe() {
@@ -38,7 +82,56 @@ export class InfoPanel extends HTMLElement {
     if (!this._scene) return;
     this._countEl.textContent = `Полигонов на холсте: ${this._scene.count}`;
     const selected = this._scene.getSelected();
-    this._selectEl.textContent = selected ? `Выбран: ${selected.name}` : 'Ничего не выбрано';
+    if (selected) {
+      this._selectEl.textContent = `Выбран: ${selected.name}`;
+      this._colorBtn.style.display = '';
+      this._colorBtn.style.backgroundColor = selected.color;
+    } else {
+      this._selectEl.textContent = 'Ничего не выбрано';
+      this._colorBtn.style.display = 'none';
+      this._closePopup();
+    }
+  }
+
+  _onColorBtnClick(e) {
+    e.stopPropagation();
+    if (!this._popup.classList.contains('hidden')) {
+      this._closePopup();
+      return;
+    }
+    const selected = this._scene.getSelected();
+    if (!selected) return;
+    this._colorInput.value = cssColorToHex(selected.color);
+    this._popup.classList.remove('hidden');
+  }
+
+  _onOkClick(e) {
+    e.stopPropagation();
+    const selected = this._scene.getSelected();
+    if (!selected || !this._commands) {
+      this._closePopup();
+      return;
+    }
+    const newColor = this._colorInput.value;
+    const oldColor = selected.color;
+    if (oldColor !== newColor) {
+      this._commands.execute(new ChangeColorCommand(this._scene, selected.id, oldColor, newColor));
+    }
+    this._closePopup();
+  }
+
+  _onDocumentClick(e) {
+    if (this._popup.classList.contains('hidden')) return;
+    if (e.target === this._colorBtn || this._popup.contains(e.target)) return;
+    this._closePopup();
+  }
+
+  _onKeyDown(e) {
+    if (e.key === 'Escape') this._closePopup();
+  }
+
+  _closePopup() {
+    this._popup.classList.add('hidden');
   }
 }
 
