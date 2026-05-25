@@ -66,7 +66,11 @@ export class AppCanvas extends HTMLElement {
         this._render();
       }),
       this._scene.on('selection-change', () => this._render()),
-      this._scene.on('polygon-moved', () => this._render()),
+      this._scene.on('polygon-moved', (poly) => {
+        const prev = this._prevPolygons.find(p => p.id === poly.id);
+        if (prev) prev.position = { ...poly.position };
+        this._render();
+      }),
     );
   }
 
